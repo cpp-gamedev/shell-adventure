@@ -19,7 +19,7 @@ fn main() -> Result<(), std::io::Error> {
         let mut query = String::new();
         stdin.read_line(&mut query)?;
         let query = Query::new(&query);
-        println!("{}\n", world.process_command(&query).to_string());
+        println!("{}\n", world.process_command(&query).execute());
     }
 }
 
@@ -35,11 +35,38 @@ impl Query {
     }
 }
 
-pub type Command = String;
+pub trait Executable {
+    fn execute(&mut self) -> String;
+}
+
+impl<T: ToString> Executable for T {
+    fn execute(&mut self) -> String {
+        self.to_string()
+    }
+}
+
+pub trait Command {
+    fn name(&self) -> String;
+    fn execute(&mut self) -> Box<dyn Executable>;
+}
+
+pub struct LookCommand {
+    contents: String,
+}
+
+impl Command for LookCommand {
+    fn name(&self) -> String {
+        "look".to_string()
+    }
+
+    fn execute(&mut self) -> Box<dyn Executable> {
+        Box::new(self.contents.clone())
+    }
+}
 
 pub trait Prop {
     fn name(&self) -> String;
-    fn commands(&self) -> Vec<Command>;
+    fn commands(&self) -> Vec<Box<dyn Command>>;
 }
 
 pub struct Table;
@@ -49,8 +76,10 @@ impl Prop for Table {
         "Table".to_owned()
     }
 
-    fn commands(&self) -> Vec<Command> {
-        vec!["look".to_owned()]
+    fn commands(&self) -> Vec<Box<dyn Command>> {
+        vec![Box::new(LookCommand {
+            contents: "A table.".to_owned(),
+        })]
     }
 }
 
@@ -69,7 +98,7 @@ impl ToString for World {
 }
 
 impl World {
-    pub fn process_command(&mut self, prompt: &Query) -> Box<dyn ToString> {
+    pub fn process_command(&mut self, prompt: &Query) -> Box<dyn Executable> {
         match prompt.contents.as_ref() {
             "look" => Box::new(self.to_string()),
             _ => Box::new("Unrecognized command."),
