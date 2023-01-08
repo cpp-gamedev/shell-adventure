@@ -5,8 +5,8 @@ pub mod world;
 use std::{collections::HashMap, io::Write};
 
 use crate::{
-    commands::{Command, ListCommand},
-    props::Table,
+    commands::{Command, ListCommand, LookCommand},
+    props::{Prop, Table},
     world::World,
 };
 
@@ -16,16 +16,11 @@ fn main() -> Result<(), std::io::Error> {
     let mut commands: HashMap<String, Box<dyn Command>> = HashMap::new();
     commands.insert("list".to_owned(), Box::new(ListCommand));
     commands.insert("help".to_owned(), Box::new(ListCommand));
-    let mut world = World {
-        props: vec![
-            Box::new(Table),
-            Box::new(Table),
-            Box::new(Table),
-            Box::new(Table),
-            Box::new(Table),
-        ],
-        commands,
-    };
+    commands.insert("look".to_owned(), Box::new(LookCommand));
+
+    let mut props: HashMap<String, Box<dyn Prop>> = HashMap::new();
+    props.insert("table".to_owned(), Box::new(Table));
+    let mut world = World { props, commands };
 
     loop {
         print!("> ");

@@ -7,18 +7,8 @@ use crate::{
 };
 
 pub struct World {
-    pub props: Vec<Box<dyn Prop>>,
+    pub props: HashMap<String, Box<dyn Prop>>,
     pub commands: HashMap<String, Box<dyn Command>>,
-}
-
-impl ToString for World {
-    fn to_string(&self) -> String {
-        self.props
-            .iter()
-            .map(|prop| format!("{}", prop.name()))
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
 }
 
 impl World {

@@ -35,6 +35,27 @@ impl Executable for ListCommandsExecutable {
     }
 }
 
+pub struct LookCommand;
+
+impl Command for LookCommand {
+    fn build(&mut self, _name: &str) -> Box<dyn Executable> {
+        Box::new(LookCommandExecutable)
+    }
+}
+
+pub struct LookCommandExecutable;
+
+impl Executable for LookCommandExecutable {
+    fn execute(&mut self, world: &mut World) -> String {
+        let mut str = "You see:\n".to_owned();
+        for (identifier, prop) in world.props.iter() {
+            str += format!("{} ({})\n", prop.name(), identifier).as_str();
+        }
+        str.pop();
+        str
+    }
+}
+
 #[derive(Clone)]
 pub struct PrintCommand {
     pub contents: String,
