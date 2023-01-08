@@ -1,8 +1,11 @@
-use std::io::Write;
+use std::{collections::HashMap, io::Write};
 
 fn main() -> Result<(), std::io::Error> {
     println!("Hello, world!");
     let stdin = std::io::stdin();
+    let mut commands: HashMap<String, Box<dyn Command>> = HashMap::new();
+    commands.insert("list".to_owned(), Box::new(ListCommand));
+    commands.insert("help".to_owned(), Box::new(ListCommand));
     let mut world = World {
         props: vec![
             Box::new(Table),
@@ -11,6 +14,7 @@ fn main() -> Result<(), std::io::Error> {
             Box::new(Table),
             Box::new(Table),
         ],
+        commands,
     };
 
     loop {
@@ -19,7 +23,13 @@ fn main() -> Result<(), std::io::Error> {
         let mut query = String::new();
         stdin.read_line(&mut query)?;
         let query = Query::new(&query);
-        println!("{}\n", world.process_command(&query).execute());
+        println!(
+            "{}\n",
+            match world.parse_command(&query) {
+                Some(mut executable) => executable.execute(&mut world),
+                None => "Unrecognized command".to_owned(),
+            }
+        );
     }
 }
 
@@ -36,30 +46,47 @@ impl Query {
 }
 
 pub trait Executable {
-    fn execute(&mut self) -> String;
+    fn execute(&mut self, world: &mut World) -> String;
 }
 
 impl<T: ToString> Executable for T {
-    fn execute(&mut self) -> String {
+    fn execute(&mut self, _world: &mut World) -> String {
         self.to_string()
     }
 }
 
 pub trait Command {
-    fn name(&self) -> String;
-    fn execute(&mut self) -> Box<dyn Executable>;
+    fn build(&mut self, name: &str) -> Box<dyn Executable>;
 }
 
-pub struct LookCommand {
+pub struct ListCommand;
+
+impl Command for ListCommand {
+    fn build(&mut self, _name: &str) -> Box<dyn Executable> {
+        Box::new(ListCommandsExecutable)
+    }
+}
+
+pub struct ListCommandsExecutable;
+
+impl Executable for ListCommandsExecutable {
+    fn execute(&mut self, world: &mut World) -> String {
+        let mut str = "Commands available:\n".to_owned();
+        for name in world.commands.keys() {
+            str += &(name.clone() + "\n");
+        }
+        str.pop();
+        str
+    }
+}
+
+#[derive(Clone)]
+pub struct PrintCommand {
     contents: String,
 }
 
-impl Command for LookCommand {
-    fn name(&self) -> String {
-        "look".to_string()
-    }
-
-    fn execute(&mut self) -> Box<dyn Executable> {
+impl Command for PrintCommand {
+    fn build(&mut self, _: &str) -> Box<dyn Executable> {
         Box::new(self.contents.clone())
     }
 }
@@ -77,7 +104,7 @@ impl Prop for Table {
     }
 
     fn commands(&self) -> Vec<Box<dyn Command>> {
-        vec![Box::new(LookCommand {
+        vec![Box::new(PrintCommand {
             contents: "A table.".to_owned(),
         })]
     }
@@ -85,6 +112,7 @@ impl Prop for Table {
 
 pub struct World {
     props: Vec<Box<dyn Prop>>,
+    commands: HashMap<String, Box<dyn Command>>,
 }
 
 impl ToString for World {
@@ -98,10 +126,10 @@ impl ToString for World {
 }
 
 impl World {
-    pub fn process_command(&mut self, prompt: &Query) -> Box<dyn Executable> {
-        match prompt.contents.as_ref() {
-            "look" => Box::new(self.to_string()),
-            _ => Box::new("Unrecognized command."),
-        }
+    pub fn parse_command(&mut self, prompt: &Query) -> Option<Box<dyn Executable>> {
+        self.commands
+            .iter_mut()
+            .find(|(name, _cmd)| name.as_str() == &prompt.contents)
+            .map(|(name, cmd)| cmd.build(name))
     }
 }
