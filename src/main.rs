@@ -13,10 +13,8 @@ use crate::{
 fn main() -> Result<(), std::io::Error> {
     println!("Hello, world!");
     let stdin = std::io::stdin();
-    let mut commands: HashMap<String, Box<dyn Command>> = HashMap::new();
-    commands.insert("list".to_owned(), Box::new(ListCommand));
-    commands.insert("help".to_owned(), Box::new(ListCommand));
-    commands.insert("look".to_owned(), Box::new(LookCommand));
+    let mut commands: Vec<Box<dyn Command>> =
+        vec![Box::new(ListCommand::new()), Box::new(LookCommand::new())];
 
     let mut props: HashMap<String, Box<dyn Prop>> = HashMap::new();
     props.insert("table".to_owned(), Box::new(Table));

@@ -1,7 +1,13 @@
+use regex::Regex;
+
 use crate::world::World;
 
 pub trait Command {
-    fn build(&mut self, name: &str) -> Box<dyn Executable>;
+    fn usage(&self) -> &str;
+
+    fn regex(&self) -> &Regex;
+
+    fn build(&mut self, m: &regex::Match) -> Box<dyn Executable>;
 }
 
 pub trait Executable {
@@ -14,10 +20,28 @@ impl<T: ToString> Executable for T {
     }
 }
 
-pub struct ListCommand;
+pub struct ListCommand {
+    regex: Regex,
+}
+
+impl ListCommand {
+    pub fn new() -> ListCommand {
+        ListCommand {
+            regex: Regex::new("(list)|(help)").unwrap(),
+        }
+    }
+}
 
 impl Command for ListCommand {
-    fn build(&mut self, _name: &str) -> Box<dyn Executable> {
+    fn usage(&self) -> &str {
+        "list / help"
+    }
+
+    fn regex(&self) -> &Regex {
+        &self.regex
+    }
+
+    fn build(&mut self, _m: &regex::Match) -> Box<dyn Executable> {
         Box::new(ListCommandsExecutable)
     }
 }
@@ -27,19 +51,38 @@ pub struct ListCommandsExecutable;
 impl Executable for ListCommandsExecutable {
     fn execute(&mut self, world: &mut World) -> String {
         let mut str = "Commands available:\n".to_owned();
-        for name in world.commands.keys() {
-            str += &(name.clone() + "\n");
+        for cmd in world.commands.iter() {
+            str += cmd.usage();
+            str += "\n";
         }
         str.pop();
         str
     }
 }
 
-pub struct LookCommand;
+pub struct LookCommand {
+    regex: Regex,
+}
+
+impl LookCommand {
+    pub fn new() -> Self {
+        Self {
+            regex: Regex::new("look").unwrap(),
+        }
+    }
+}
 
 impl Command for LookCommand {
-    fn build(&mut self, _name: &str) -> Box<dyn Executable> {
+    fn usage(&self) -> &str {
+        "look"
+    }
+
+    fn build(&mut self, _m: &regex::Match) -> Box<dyn Executable> {
         Box::new(LookCommandExecutable)
+    }
+
+    fn regex(&self) -> &Regex {
+        &self.regex
     }
 }
 
@@ -59,10 +102,25 @@ impl Executable for LookCommandExecutable {
 #[derive(Clone)]
 pub struct PrintCommand {
     pub contents: String,
+    pub regex: Regex,
+}
+
+impl PrintCommand {
+    pub fn new(contents: String, regex: Regex) -> Self {
+        Self { contents, regex }
+    }
 }
 
 impl Command for PrintCommand {
-    fn build(&mut self, _: &str) -> Box<dyn Executable> {
+    fn usage(&self) -> &str {
+        "print"
+    }
+
+    fn build(&mut self, m: &regex::Match) -> Box<dyn Executable> {
         Box::new(self.contents.clone())
+    }
+
+    fn regex(&self) -> &Regex {
+        &self.regex
     }
 }
