@@ -1,21 +1,19 @@
 use std::collections::HashMap;
 
-use crate::{
-    commands::{Command, Executable},
-    props::Prop,
-    Query,
-};
+use crate::Query;
 
-pub struct World {
-    pub props: HashMap<String, Box<dyn Prop>>,
-    pub commands: HashMap<String, Box<dyn Command>>,
+pub struct File {
+    pub data: String,
+    pub is_executable: bool,
 }
 
-impl World {
-    pub fn parse_command(&mut self, prompt: &Query) -> Option<Box<dyn Executable>> {
-        self.commands
-            .iter_mut()
-            .find(|(name, _cmd)| name.as_str() == &prompt.contents)
-            .map(|(name, cmd)| cmd.build(name))
-    }
+pub struct Directory {
+    pub files: Vec<File>,
+    pub dirs: Vec<Directory>,
+    pub is_writable: bool,
+}
+
+pub struct Machine {
+    pub cwd: String,
+    pub dir_tree: Directory,
 }

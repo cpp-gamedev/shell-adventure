@@ -1,26 +1,20 @@
-pub mod commands;
-pub mod props;
 pub mod world;
 
 use std::{collections::HashMap, io::Write};
 
-use crate::{
-    commands::{Command, ListCommand, LookCommand},
-    props::{Prop, Table},
-    world::World,
-};
+use crate::world::Machine;
 
 fn main() -> Result<(), std::io::Error> {
     println!("Hello, world!");
     let stdin = std::io::stdin();
-    let mut commands: HashMap<String, Box<dyn Command>> = HashMap::new();
-    commands.insert("list".to_owned(), Box::new(ListCommand));
-    commands.insert("help".to_owned(), Box::new(ListCommand));
-    commands.insert("look".to_owned(), Box::new(LookCommand));
-
-    let mut props: HashMap<String, Box<dyn Prop>> = HashMap::new();
-    props.insert("table".to_owned(), Box::new(Table));
-    let mut world = World { props, commands };
+    let mut world = Machine {
+        cwd: "/".to_string(),
+        dir_tree: world::Directory {
+            files: vec![],
+            dirs: vec![],
+            is_writable: false,
+        },
+    };
 
     loop {
         print!("> ");
@@ -28,13 +22,6 @@ fn main() -> Result<(), std::io::Error> {
         let mut query = String::new();
         stdin.read_line(&mut query)?;
         let query = Query::new(&query);
-        println!(
-            "{}\n",
-            match world.parse_command(&query) {
-                Some(mut executable) => executable.execute(&mut world),
-                None => "Unrecognized command".to_owned(),
-            }
-        );
     }
 }
 
