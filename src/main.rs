@@ -75,6 +75,7 @@ fn main() -> Result<(), std::io::Error> {
             ("cd", [..]) => {
                 println!("Invalid number of parameters.\nExpected usage: cd <dir>");
             }
+            // TODO: cat
             _ => {
                 println!("Unrecognized executable or command");
             }

@@ -46,6 +46,7 @@ impl Path {
             (str, false)
         };
         let mut components: Vec<String> = str.split('/').map(ToOwned::to_owned).collect();
+        // trailing slash hack
         if components.last().map_or(false, String::is_empty) {
             components.pop();
         }
@@ -71,6 +72,7 @@ impl std::ops::Add for Path {
     type Output = Path;
 
     fn add(mut self, mut rhs: Self) -> Self::Output {
+        // cd foo/bar + cd /foo = /foo resulting dir
         if rhs.is_absolute() {
             rhs
         } else {
