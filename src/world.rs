@@ -1,6 +1,5 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Write};
 
-use itertools::Itertools;
 use thiserror::Error;
 
 pub struct File {
@@ -146,20 +145,17 @@ impl std::ops::AddAssign<Path> for Path {
     }
 }
 
-// TODO: impl std::fmt::Display for Path
-impl ToString for Path {
-    fn to_string(&self) -> String {
-        let relative_result = self
-            .components
-            .iter()
-            .map(String::as_ref)
-            .intersperse("/")
-            .collect::<String>();
+impl std::fmt::Display for Path {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.is_absolute {
-            "/".to_owned() + relative_result.as_ref()
-        } else {
-            relative_result
+            f.write_char('/')?;
         }
+
+        for part in itertools::intersperse(self.components.iter().map(String::as_ref), "/") {
+            f.write_str(part)?
+        }
+
+        Ok(())
     }
 }
 
