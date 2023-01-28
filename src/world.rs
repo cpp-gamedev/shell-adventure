@@ -19,24 +19,24 @@ pub enum DirEntry<'f> {
 }
 
 pub struct Machine {
-    pub cwd: Path,
+    pub cwd: PathBuf,
     pub root_dir: Directory,
 }
 
 // TODO: Special components (.., .)
 #[derive(Clone)]
-pub struct Path {
+pub struct PathBuf {
     components: Vec<String>,
     is_absolute: bool,
 }
 
 #[derive(Clone)]
-pub struct PathView<'a> {
+pub struct Path<'a> {
     components: &'a [String],
     is_absolute: bool,
 }
 
-impl Path {
+impl PathBuf {
     pub fn root() -> Self {
         Self {
             components: vec![],
@@ -62,15 +62,15 @@ impl Path {
         }
     }
 
-    pub fn as_view(&self) -> PathView {
-        PathView {
+    pub fn as_view(&self) -> Path {
+        Path {
             components: self.components.as_slice(),
             is_absolute: self.is_absolute,
         }
     }
 }
 
-impl PathView<'_> {
+impl Path<'_> {
     pub fn is_absolute(&self) -> bool {
         self.is_absolute
     }
@@ -79,8 +79,8 @@ impl PathView<'_> {
         !self.is_absolute
     }
 
-    pub fn to_path(&self) -> Path {
-        Path {
+    pub fn to_path(&self) -> PathBuf {
+        PathBuf {
             components: self.components.iter().cloned().collect_vec(),
             is_absolute: self.is_absolute,
         }
@@ -88,10 +88,10 @@ impl PathView<'_> {
 }
 
 // TODO: Same semantics as String add (Owned + Borrowed)
-impl std::ops::Add<PathView<'_>> for Path {
-    type Output = Path;
+impl std::ops::Add<Path<'_>> for PathBuf {
+    type Output = PathBuf;
 
-    fn add(mut self, rhs: PathView) -> Self::Output {
+    fn add(mut self, rhs: Path) -> Self::Output {
         // cd foo/bar + cd /foo = /foo resulting dir
         if rhs.is_absolute() {
             rhs.to_path()
@@ -102,8 +102,8 @@ impl std::ops::Add<PathView<'_>> for Path {
     }
 }
 
-impl std::ops::AddAssign<PathView<'_>> for Path {
-    fn add_assign(&mut self, rhs: PathView<'_>) {
+impl std::ops::AddAssign<Path<'_>> for PathBuf {
+    fn add_assign(&mut self, rhs: Path<'_>) {
         if rhs.is_absolute() {
             *self = rhs.to_path();
         } else {
@@ -113,7 +113,7 @@ impl std::ops::AddAssign<PathView<'_>> for Path {
 }
 
 // TODO: impl std::fmt::Display for Path
-impl ToString for Path {
+impl ToString for PathBuf {
     fn to_string(&self) -> String {
         let relative_result = self
             .components
@@ -131,7 +131,7 @@ impl ToString for Path {
 
 impl Machine {
     // TODO: Return a Result instead of an Option. Use thiserror for the error type
-    pub fn traverse(&self, path: PathView) -> Option<DirEntry> {
+    pub fn traverse(&self, path: Path) -> Option<DirEntry> {
         let path = if path.is_relative() {
             self.cwd.clone() + path
         } else {
