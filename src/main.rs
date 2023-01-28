@@ -4,13 +4,13 @@ use std::{collections::HashMap, io::Write, path};
 
 use itertools::Itertools;
 
-use crate::world::{DirEntry, Directory, File, Machine, PathBuf};
+use crate::world::{DirEntry, Directory, File, Machine, Path};
 
 fn main() -> Result<(), std::io::Error> {
     println!("Hello, world!");
     let stdin = std::io::stdin();
     let mut machine = Machine {
-        cwd: PathBuf::root(),
+        cwd: Path::root(),
         root_dir: world::Directory {
             files: HashMap::from_iter(
                 [(
@@ -46,7 +46,7 @@ fn main() -> Result<(), std::io::Error> {
 
         match (query.executable.as_ref(), query.params.as_slice()) {
             ("ls", _) => {
-                let cwd = match machine.traverse(machine.cwd.as_view()).unwrap() {
+                let cwd = match machine.traverse(&machine.cwd).unwrap() {
                     world::DirEntry::Directory(dir) => dir,
                     world::DirEntry::File(_) => unreachable!(),
                 };
@@ -63,11 +63,8 @@ fn main() -> Result<(), std::io::Error> {
                 println!("{}", machine.cwd.to_string());
             }
             ("cd", [path]) => {
-                let path = machine.cwd.clone() + PathBuf::parse(path).as_view();
-                let is_valid = matches!(
-                    machine.traverse(path.as_view()),
-                    Some(DirEntry::Directory(_))
-                );
+                let path = machine.cwd.clone() + Path::parse(path);
+                let is_valid = matches!(machine.traverse(&path), Some(DirEntry::Directory(_)));
 
                 if is_valid {
                     machine.cwd = path;
@@ -78,7 +75,7 @@ fn main() -> Result<(), std::io::Error> {
             ("cd", [..]) => {
                 println!("Invalid number of parameters.\nExpected usage: cd <dir>");
             }
-            ("cat", [path]) => match machine.traverse(PathBuf::parse(path).as_view()) {
+            ("cat", [path]) => match machine.traverse(&Path::parse(path)) {
                 Some(DirEntry::File(file)) => println!("{}", file.data),
                 _ => println!("TODO: better error messsage (invalid cat target)"),
             },

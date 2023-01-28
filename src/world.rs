@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{borrow::Borrow, collections::HashMap, ops::Deref};
 
 use itertools::Itertools;
 
@@ -19,24 +19,18 @@ pub enum DirEntry<'f> {
 }
 
 pub struct Machine {
-    pub cwd: PathBuf,
+    pub cwd: Path,
     pub root_dir: Directory,
 }
 
 // TODO: Special components (.., .)
 #[derive(Clone)]
-pub struct PathBuf {
+pub struct Path {
     components: Vec<String>,
     is_absolute: bool,
 }
 
-#[derive(Clone)]
-pub struct Path<'a> {
-    components: &'a [String],
-    is_absolute: bool,
-}
-
-impl PathBuf {
+impl Path {
     pub fn root() -> Self {
         Self {
             components: vec![],
@@ -62,15 +56,6 @@ impl PathBuf {
         }
     }
 
-    pub fn as_view(&self) -> Path {
-        Path {
-            components: self.components.as_slice(),
-            is_absolute: self.is_absolute,
-        }
-    }
-}
-
-impl Path<'_> {
     pub fn is_absolute(&self) -> bool {
         self.is_absolute
     }
@@ -78,23 +63,16 @@ impl Path<'_> {
     pub fn is_relative(&self) -> bool {
         !self.is_absolute
     }
-
-    pub fn to_path(&self) -> PathBuf {
-        PathBuf {
-            components: self.components.iter().cloned().collect_vec(),
-            is_absolute: self.is_absolute,
-        }
-    }
 }
 
 // TODO: Same semantics as String add (Owned + Borrowed)
-impl std::ops::Add<Path<'_>> for PathBuf {
-    type Output = PathBuf;
+impl std::ops::Add<Path> for Path {
+    type Output = Path;
 
     fn add(mut self, rhs: Path) -> Self::Output {
         // cd foo/bar + cd /foo = /foo resulting dir
         if rhs.is_absolute() {
-            rhs.to_path()
+            rhs
         } else {
             self.components.extend(rhs.components.iter().cloned());
             self
@@ -102,10 +80,10 @@ impl std::ops::Add<Path<'_>> for PathBuf {
     }
 }
 
-impl std::ops::AddAssign<Path<'_>> for PathBuf {
-    fn add_assign(&mut self, rhs: Path<'_>) {
+impl std::ops::AddAssign<Path> for Path {
+    fn add_assign(&mut self, rhs: Path) {
         if rhs.is_absolute() {
-            *self = rhs.to_path();
+            *self = rhs;
         } else {
             self.components.extend(rhs.components.iter().cloned());
         }
@@ -113,7 +91,7 @@ impl std::ops::AddAssign<Path<'_>> for PathBuf {
 }
 
 // TODO: impl std::fmt::Display for Path
-impl ToString for PathBuf {
+impl ToString for Path {
     fn to_string(&self) -> String {
         let relative_result = self
             .components
@@ -131,11 +109,13 @@ impl ToString for PathBuf {
 
 impl Machine {
     // TODO: Return a Result instead of an Option. Use thiserror for the error type
-    pub fn traverse(&self, path: Path) -> Option<DirEntry> {
+    pub fn traverse(&self, path: &Path) -> Option<DirEntry> {
+        let cwd_plus_path;
         let path = if path.is_relative() {
-            self.cwd.clone() + path
+            cwd_plus_path = self.cwd.clone() + path.clone();
+            &cwd_plus_path
         } else {
-            path.to_path()
+            path
         };
 
         let mut current_dir = &self.root_dir;
