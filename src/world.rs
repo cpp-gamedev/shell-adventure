@@ -23,11 +23,16 @@ pub struct Machine {
     pub root_dir: Directory,
 }
 
-// TODO: Borrowed version
 // TODO: Special components (.., .)
 #[derive(Clone)]
 pub struct Path {
     components: Vec<String>,
+    is_absolute: bool,
+}
+
+#[derive(Clone)]
+pub struct PathView<'a> {
+    components: &'a [String],
     is_absolute: bool,
 }
 
@@ -57,6 +62,15 @@ impl Path {
         }
     }
 
+    pub fn as_view(&self) -> PathView {
+        PathView {
+            components: self.components.as_slice(),
+            is_absolute: self.is_absolute,
+        }
+    }
+}
+
+impl PathView<'_> {
     pub fn is_absolute(&self) -> bool {
         self.is_absolute
     }
@@ -64,19 +78,26 @@ impl Path {
     pub fn is_relative(&self) -> bool {
         !self.is_absolute
     }
+
+    pub fn to_path(&self) -> Path {
+        Path {
+            components: self.components.iter().cloned().collect_vec(),
+            is_absolute: self.is_absolute,
+        }
+    }
 }
 
 // TODO: Same semantics as String add (Owned + Borrowed)
 // TODO: impl AddAssign
-impl std::ops::Add for Path {
+impl std::ops::Add<PathView<'_>> for Path {
     type Output = Path;
 
-    fn add(mut self, mut rhs: Self) -> Self::Output {
+    fn add(mut self, rhs: PathView) -> Self::Output {
         // cd foo/bar + cd /foo = /foo resulting dir
         if rhs.is_absolute() {
-            rhs
+            rhs.to_path()
         } else {
-            self.components.extend(rhs.components.drain(..));
+            self.components.extend(rhs.components.iter().cloned());
             self
         }
     }
@@ -102,11 +123,11 @@ impl ToString for Path {
 impl Machine {
     // TODO: Take borrowed version of path instead
     // TODO: Return a Result instead of an Option. Use thiserror for the error type
-    pub fn traverse(&self, path: Path) -> Option<DirEntry> {
+    pub fn traverse(&self, path: PathView) -> Option<DirEntry> {
         let path = if path.is_relative() {
             self.cwd.clone() + path
         } else {
-            path
+            path.to_path()
         };
 
         let mut current_dir = &self.root_dir;

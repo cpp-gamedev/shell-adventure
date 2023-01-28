@@ -46,7 +46,7 @@ fn main() -> Result<(), std::io::Error> {
 
         match (query.executable.as_ref(), query.params.as_slice()) {
             ("ls", _) => {
-                let cwd = match world.traverse(world.cwd.clone()).unwrap() {
+                let cwd = match world.traverse(world.cwd.as_view()).unwrap() {
                     world::DirEntry::Directory(dir) => dir,
                     world::DirEntry::File(_) => unreachable!(),
                 };
@@ -63,8 +63,9 @@ fn main() -> Result<(), std::io::Error> {
                 println!("{}", world.cwd.to_string());
             }
             ("cd", [path]) => {
-                let path = world.cwd.clone() + Path::parse(path);
-                let is_valid = matches!(world.traverse(path.clone()), Some(DirEntry::Directory(_)));
+                let path = world.cwd.clone() + Path::parse(path).as_view();
+                let is_valid =
+                    matches!(world.traverse(path.as_view()), Some(DirEntry::Directory(_)));
 
                 if is_valid {
                     world.cwd = path;
