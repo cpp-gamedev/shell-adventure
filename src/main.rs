@@ -2,8 +2,6 @@ pub mod world;
 
 use std::io::Write;
 
-use itertools::Itertools;
-
 use crate::world::{DirEntry, Machine, Path};
 
 fn main() -> Result<(), std::io::Error> {
@@ -23,7 +21,7 @@ fn main() -> Result<(), std::io::Error> {
     };
 
     loop {
-        print!("{} > ", machine.cwd.to_string());
+        print!("{} > ", machine.cwd);
         std::io::stdout().flush()?;
         let mut query = String::new();
         stdin.read_line(&mut query)?;
@@ -35,21 +33,22 @@ fn main() -> Result<(), std::io::Error> {
                     world::DirEntry::Directory(dir) => dir,
                     world::DirEntry::File(_) => unreachable!(),
                 };
-                let result = cwd
-                    .dirs
-                    .keys()
-                    .map(String::as_ref)
-                    .chain(cwd.files.keys().map(String::as_ref))
-                    .intersperse("\t")
-                    .collect::<String>();
+                let result = itertools::intersperse(
+                    cwd.dirs
+                        .keys()
+                        .map(String::as_ref)
+                        .chain(cwd.files.keys().map(String::as_ref)),
+                    "\t",
+                )
+                .collect::<String>();
                 println!("{}", result);
             }
             ("cwd", _) => {
-                println!("{}", machine.cwd.to_string());
+                println!("{}", machine.cwd);
             }
             ("cd", [path]) => {
                 let path = machine.cwd.clone() + Path::parse(path);
-                let Some(DirEntry::Directory(traversal_dir)) = machine.traverse(&path) else { println!("No such path: \"{}\"", path.to_string()); continue;};
+                let Some(DirEntry::Directory(traversal_dir)) = machine.traverse(&path) else { println!("No such path: \"{}\"", path); continue;};
 
                 machine.cwd = traversal_dir.path().clone();
             }

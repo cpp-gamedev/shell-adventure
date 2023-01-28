@@ -94,8 +94,8 @@ impl Path {
     }
 
     pub fn parse(str: &str) -> Self {
-        let (str, is_absolute) = if str.starts_with('/') {
-            (&str[1..], true)
+        let (str, is_absolute) = if let Some(stripped_absolute) = str.strip_prefix('/') {
+            (stripped_absolute, true)
         } else {
             (str, false)
         };
@@ -140,7 +140,7 @@ impl std::ops::AddAssign<Path> for Path {
         if rhs.is_absolute() {
             *self = rhs;
         } else {
-            self.components.extend(rhs.components.drain(..));
+            self.components.append(&mut rhs.components);
         }
     }
 }
@@ -184,10 +184,8 @@ impl Machine {
                 }
                 "." => (),
                 component => {
-                    if is_last {
-                        if current_dir.files.contains_key(component) {
-                            return Some(DirEntry::File(&current_dir.files[component]));
-                        }
+                    if is_last && current_dir.files.contains_key(component) {
+                        return Some(DirEntry::File(&current_dir.files[component]));
                     }
                     traversal_stack.push(current_dir);
                     if current_dir.dirs.contains_key(component) {
