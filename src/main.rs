@@ -1,39 +1,24 @@
 pub mod world;
 
-use std::{collections::HashMap, io::Write, path};
+use std::io::Write;
 
 use itertools::Itertools;
 
-use crate::world::{DirEntry, Directory, File, Machine, Path};
+use crate::world::{DirEntry, Machine, Path};
 
 fn main() -> Result<(), std::io::Error> {
     println!("Hello, world!");
     let stdin = std::io::stdin();
     let mut machine = Machine {
         cwd: Path::root(),
-        root_dir: world::Directory {
-            files: HashMap::from_iter(
-                [(
-                    "README.txt".to_owned(),
-                    File {
-                        data: "Hello World!".to_owned(),
-                        is_executable: false,
-                    },
-                )]
-                .into_iter(),
-            ),
-            dirs: HashMap::from_iter(
-                [(
-                    "test".to_owned(),
-                    Directory {
-                        dirs: Default::default(),
-                        files: Default::default(),
-                        is_writable: false,
-                    },
-                )]
-                .into_iter(),
-            ),
-            is_writable: false,
+        root_dir: {
+            let mut root = world::Directory::new_root();
+            root.create_dir("test".to_owned())
+                .unwrap()
+                .create_file("inside_test".to_owned())
+                .unwrap();
+            root.create_file("README.txt".to_owned()).unwrap();
+            root
         },
     };
 
@@ -64,13 +49,9 @@ fn main() -> Result<(), std::io::Error> {
             }
             ("cd", [path]) => {
                 let path = machine.cwd.clone() + Path::parse(path);
-                let is_valid = matches!(machine.traverse(&path), Some(DirEntry::Directory(_)));
+                let Some(DirEntry::Directory(traversal_dir)) = machine.traverse(&path) else { println!("No such path: \"{}\"", path.to_string()); continue;};
 
-                if is_valid {
-                    machine.cwd = path;
-                } else {
-                    println!("No such path: \"{}\"", path.to_string());
-                }
+                machine.cwd = traversal_dir.path().clone();
             }
             ("cd", [..]) => {
                 println!("Invalid number of parameters.\nExpected usage: cd <dir>");

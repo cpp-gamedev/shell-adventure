@@ -1,16 +1,73 @@
-use std::{borrow::Borrow, collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 
 use itertools::Itertools;
+use thiserror::Error;
 
 pub struct File {
+    path: Path,
     pub data: String,
     pub is_executable: bool,
 }
 
+impl File {
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
 pub struct Directory {
+    path: Path,
     pub files: HashMap<String, File>,
     pub dirs: HashMap<String, Directory>,
     pub is_writable: bool,
+}
+
+#[derive(Debug, Error)]
+#[error("tried to create directory or file, but object with that name already existed")]
+pub struct AlreadyExistsError;
+
+impl Directory {
+    pub fn new_root() -> Self {
+        Self {
+            path: Path::root(),
+            files: Default::default(),
+            dirs: Default::default(),
+            is_writable: Default::default(),
+        }
+    }
+
+    pub fn create_dir(&mut self, name: String) -> Result<&mut Directory, AlreadyExistsError> {
+        match self.dirs.entry(name) {
+            std::collections::hash_map::Entry::Occupied(_) => Err(AlreadyExistsError),
+            std::collections::hash_map::Entry::Vacant(v) => {
+                let name = v.key().clone();
+                Ok(v.insert(Directory {
+                    path: self.path.clone().with_component(name),
+                    dirs: Default::default(),
+                    files: Default::default(),
+                    is_writable: false,
+                }))
+            }
+        }
+    }
+
+    pub fn create_file(&mut self, name: String) -> Result<&mut File, AlreadyExistsError> {
+        match self.files.entry(name) {
+            std::collections::hash_map::Entry::Occupied(_) => Err(AlreadyExistsError),
+            std::collections::hash_map::Entry::Vacant(v) => {
+                let name = v.key().clone();
+                Ok(v.insert(File {
+                    path: self.path.clone().with_component(name),
+                    data: Default::default(),
+                    is_executable: false,
+                }))
+            }
+        }
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
 pub enum DirEntry<'f> {
@@ -53,6 +110,11 @@ impl Path {
             components,
             is_absolute,
         }
+    }
+
+    pub fn with_component(mut self, component: String) -> Self {
+        self.components.push(component);
+        self
     }
 
     pub fn is_absolute(&self) -> bool {
