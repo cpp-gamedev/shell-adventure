@@ -23,7 +23,6 @@ pub struct Machine {
     pub root_dir: Directory,
 }
 
-// TODO: Special components (.., .)
 #[derive(Clone)]
 pub struct Path {
     components: Vec<String>,
@@ -118,6 +117,7 @@ impl Machine {
             path
         };
 
+        let mut traversal_stack = Vec::with_capacity(path.components.len());
         let mut current_dir = &self.root_dir;
         for (is_last, component) in path
             .components
@@ -125,15 +125,24 @@ impl Machine {
             .enumerate()
             .map(|(idx, x)| (idx == path.components.len() - 1, x))
         {
-            if is_last {
-                if current_dir.files.contains_key(component) {
-                    return Some(DirEntry::File(&current_dir.files[component]));
+            match component.as_str() {
+                ".." => {
+                    current_dir = traversal_stack.pop().unwrap_or(&self.root_dir);
                 }
-            }
-            if current_dir.dirs.contains_key(component) {
-                current_dir = &current_dir.dirs[component];
-            } else {
-                return None;
+                "." => (),
+                component => {
+                    if is_last {
+                        if current_dir.files.contains_key(component) {
+                            return Some(DirEntry::File(&current_dir.files[component]));
+                        }
+                    }
+                    traversal_stack.push(current_dir);
+                    if current_dir.dirs.contains_key(component) {
+                        current_dir = &current_dir.dirs[component];
+                    } else {
+                        return None;
+                    }
+                }
             }
         }
 
