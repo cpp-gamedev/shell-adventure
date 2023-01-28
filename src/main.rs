@@ -6,6 +6,7 @@ use crate::world::{DirEntry, Machine, Path};
 
 fn main() -> Result<(), std::io::Error> {
     println!("Hello, world!");
+    // TODO: Support autocompletion & add cmd history
     let stdin = std::io::stdin();
     let mut machine = Machine {
         cwd: Path::root(),
@@ -20,6 +21,7 @@ fn main() -> Result<(), std::io::Error> {
         },
     };
 
+    // TODO: Colored output
     loop {
         print!("{} > ", machine.cwd);
         std::io::stdout().flush()?;
