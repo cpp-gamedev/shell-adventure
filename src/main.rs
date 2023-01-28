@@ -17,7 +17,7 @@ fn main() -> Result<(), std::io::Error> {
                 .unwrap()
                 .create_file("inside_test".to_owned())
                 .unwrap();
-            root.create_file("README.txt".to_owned()).unwrap();
+            root.create_file("README.txt".to_owned()).unwrap().data = "Hello World!".to_owned();
             root
         },
     };
@@ -56,10 +56,17 @@ fn main() -> Result<(), std::io::Error> {
             ("cd", [..]) => {
                 println!("Invalid number of parameters.\nExpected usage: cd <dir>");
             }
-            ("cat", [path]) => match machine.traverse(&Path::parse(path)) {
-                Some(DirEntry::File(file)) => println!("{}", file.data),
-                _ => println!("TODO: better error messsage (invalid cat target)"),
-            },
+            ("cat", paths) => {
+                for path in paths.iter() {
+                    match machine.traverse(&Path::parse(path)) {
+                        Some(DirEntry::File(file)) => println!("{}", file.data),
+                        Some(DirEntry::Directory(_)) => println!("{}: Is a directory", path),
+                        None => {
+                            println!("{}: No such file or directory", path)
+                        }
+                    }
+                }
+            }
             ("quit" | "exit", [..]) => {
                 return Ok(());
             }
