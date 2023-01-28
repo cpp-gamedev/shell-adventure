@@ -88,7 +88,6 @@ impl PathView<'_> {
 }
 
 // TODO: Same semantics as String add (Owned + Borrowed)
-// TODO: impl AddAssign
 impl std::ops::Add<PathView<'_>> for Path {
     type Output = Path;
 
@@ -99,6 +98,16 @@ impl std::ops::Add<PathView<'_>> for Path {
         } else {
             self.components.extend(rhs.components.iter().cloned());
             self
+        }
+    }
+}
+
+impl std::ops::AddAssign<PathView<'_>> for Path {
+    fn add_assign(&mut self, rhs: PathView<'_>) {
+        if rhs.is_absolute() {
+            *self = rhs.to_path();
+        } else {
+            self.components.extend(rhs.components.iter().cloned());
         }
     }
 }
@@ -121,7 +130,6 @@ impl ToString for Path {
 }
 
 impl Machine {
-    // TODO: Take borrowed version of path instead
     // TODO: Return a Result instead of an Option. Use thiserror for the error type
     pub fn traverse(&self, path: PathView) -> Option<DirEntry> {
         let path = if path.is_relative() {
