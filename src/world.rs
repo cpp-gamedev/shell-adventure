@@ -126,27 +126,22 @@ impl Path {
     }
 }
 
-// TODO: Same semantics as String add (Owned + Borrowed)
 impl std::ops::Add<Path> for Path {
     type Output = Path;
 
     fn add(mut self, rhs: Path) -> Self::Output {
-        // cd foo/bar + cd /foo = /foo resulting dir
-        if rhs.is_absolute() {
-            rhs
-        } else {
-            self.components.extend(rhs.components.iter().cloned());
-            self
-        }
+        self += rhs;
+        self
     }
 }
 
 impl std::ops::AddAssign<Path> for Path {
-    fn add_assign(&mut self, rhs: Path) {
+    fn add_assign(&mut self, mut rhs: Path) {
+        // cd foo/bar + cd /foo = /foo resulting dir
         if rhs.is_absolute() {
             *self = rhs;
         } else {
-            self.components.extend(rhs.components.iter().cloned());
+            self.components.extend(rhs.components.drain(..));
         }
     }
 }
