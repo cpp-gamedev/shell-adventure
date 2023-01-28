@@ -9,7 +9,7 @@ use crate::world::{DirEntry, Directory, File, Machine, Path};
 fn main() -> Result<(), std::io::Error> {
     println!("Hello, world!");
     let stdin = std::io::stdin();
-    let mut world = Machine {
+    let mut machine = Machine {
         cwd: Path::root(),
         root_dir: world::Directory {
             files: HashMap::from_iter(
@@ -38,7 +38,7 @@ fn main() -> Result<(), std::io::Error> {
     };
 
     loop {
-        print!("{} > ", world.cwd.to_string());
+        print!("{} > ", machine.cwd.to_string());
         std::io::stdout().flush()?;
         let mut query = String::new();
         stdin.read_line(&mut query)?;
@@ -46,7 +46,7 @@ fn main() -> Result<(), std::io::Error> {
 
         match (query.executable.as_ref(), query.params.as_slice()) {
             ("ls", _) => {
-                let cwd = match world.traverse(world.cwd.as_view()).unwrap() {
+                let cwd = match machine.traverse(machine.cwd.as_view()).unwrap() {
                     world::DirEntry::Directory(dir) => dir,
                     world::DirEntry::File(_) => unreachable!(),
                 };
@@ -60,15 +60,17 @@ fn main() -> Result<(), std::io::Error> {
                 println!("{}", result);
             }
             ("cwd", _) => {
-                println!("{}", world.cwd.to_string());
+                println!("{}", machine.cwd.to_string());
             }
             ("cd", [path]) => {
-                let path = world.cwd.clone() + Path::parse(path).as_view();
-                let is_valid =
-                    matches!(world.traverse(path.as_view()), Some(DirEntry::Directory(_)));
+                let path = machine.cwd.clone() + Path::parse(path).as_view();
+                let is_valid = matches!(
+                    machine.traverse(path.as_view()),
+                    Some(DirEntry::Directory(_))
+                );
 
                 if is_valid {
-                    world.cwd = path;
+                    machine.cwd = path;
                 } else {
                     println!("No such path: \"{}\"", path.to_string());
                 }
@@ -76,7 +78,13 @@ fn main() -> Result<(), std::io::Error> {
             ("cd", [..]) => {
                 println!("Invalid number of parameters.\nExpected usage: cd <dir>");
             }
-            // TODO: cat
+            ("cat", [path]) => match machine.traverse(Path::parse(path).as_view()) {
+                Some(DirEntry::File(file)) => println!("{}", file.data),
+                _ => println!("TODO: better error messsage (invalid cat target)"),
+            },
+            ("quit" | "exit", [..]) => {
+                return Ok(());
+            }
             _ => {
                 println!("Unrecognized executable or command");
             }
